@@ -35,3 +35,6 @@ ____________________________________________
  Telefax:    44+ (0)207 278 5616
  e-mail:     d.rusakov@ion.ucl.ac.uk
 ___________________________________________
+
+20120112 updated to use cnexp in place of euler method in cachan.mod as per
+http://www.neuron.yale.edu/phpbb/viewtopic.php?f=28&t=592
