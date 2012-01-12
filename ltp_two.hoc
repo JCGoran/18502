@@ -1,0 +1,287 @@
+/* NEURON hoc program. 
+Random topography of spines. 
+20% of spines have 0.5 AZ 
+efficiency*/
+
+load_file("nrngui.hoc")
+
+   /* creating soma */
+create soma[3]
+access soma[0]
+  nseg=3
+  diam=12
+  L=3   
+  insert hh
+access soma[1]
+  nseg=3
+  diam=15
+  L=9
+  insert hh
+access soma[2]
+  nseg=3
+  diam=12
+  L=3
+  insert hh
+for i=0,1 soma[i] {
+   connect soma[i+1](0), soma[i](1)
+}
+   /* creating dendrites */
+
+create dend0
+access dend0
+   nseg=3
+   diam=2
+   L=5
+   insert pas 
+create dend1[2]
+for i=0,1 dend1[i] {
+   nseg=5
+   diam=1
+   L=40
+   insert pas
+}
+create dend2[4]
+for i=0,3 dend2[i] {
+   nseg=120
+   diam=0.85
+   L=60
+   insert pas 
+} 
+create dend3[8]
+for i=0,7 dend3[i] {
+   nseg=5
+   diam=0.8
+   L=40
+   insert pas 
+}
+/* create dend4[16]
+for i=0,15 dend4[i] {
+   nseg=3
+   diam=0.65
+   L=20
+   insert pas 
+}  */
+        /* creating 48 spine stems */
+coord_cadifus()
+objectvar rr[60]  // random stem diameters
+create spins[48]
+for i=0,47 spins[i] {
+ rr[i] = new Random()   
+   rr[i].normal(0.18,0.0121)
+   x=(rr.repick())
+   nseg=10 
+//   diam=0.1
+   if (x<0.02) x=0.02+abs(x)
+   diam=x
+   L=1
+   insert pas 
+}
+ /* creating 48 spine heads and AZ */
+create spinh[48]
+create spina[48]
+for i=0,47 spinh[i] {
+   nseg=2 
+   diam=1
+   L=0.7
+/* regenerative Ca2+ mechanisms 
+are adjusted */
+   insert cachan
+   insert cagk
+   insert cadifpmp
+   pcabar_cachan=0.002
+   gkbar_cagk=0.1
+   ek=-95
+   taufactor_cachan=0.5
+   cai=1e-04
+   cao=1.
+   pump0_cadifpmp=1e-13 /* 3e-14 is 
+a default */
+}
+for i=0,47 spina[i] { 
+   nseg=1
+   diam=1
+   L=0.1
+   insert pas
+}
+   /* creating additional 
+12 splitted spines */
+
+create splns1[12]
+create splns2[24]
+create splnh[24]
+create splna[24]
+
+// two stem-hands
+for i=0,23 splns2[i] {
+   nseg=4
+   L=0.91
+   insert pas
+ }
+// stem-feet 
+for i=0,11 splns1[i] {
+   j=2*i 
+   rr[i+48] = new Random()   
+   rr[i+48].normal(0.18,0.0121)
+   x=(rr.repick())
+   nseg=10 
+//   diam=0.1
+   if (x<0) x=0.02+abs(x)
+   diam=x
+
+   L=0.09  // SPLITTING POINT !!!!!!!
+
+/* "splitting occurs so that two 
+new spines are formed with
+AZs twice smaller; otherwise, these 
+are regular spines */ 
+
+   insert pas
+   splns2[j].diam=x  // just regular diameter 
+   splns2[j+1].diam=x  // just regular diameter 
+}
+//  additional spine heads 
+for i=0,23 splnh[i] {
+   nseg=2 
+   diam=0.5  // S is invariant
+   L=0.7
+//* regenerative Ca2+ mechanisms are at 5x of NEURONs   //
+   insert cachan
+   insert cagk
+   insert cadifpmp
+   pcabar_cachan=0.002
+   gkbar_cagk=0.1
+   ek=-95
+   taufactor_cachan=0.5
+   cai=1e-04
+   cao=1.
+   pump0_cadifpmp=1e-13 /* 3e-14 is 
+default */
+}
+// additional spine active zones
+for i=0,23 splna[i] { // active zones
+   nseg=1
+   diam=0.5 // S is invariant
+   L=0.1
+   insert pas
+}
+ /* connecting splitted spine feet, 
+hands, and heads */  
+for i=0,23 { 
+    j=int(i/2+.001)
+    connect splns2[i](0), splns1[j](1) 
+    connect splnh[i](0), splns2[i](1)
+    connect splna[i](0), splnh[i](1)
+}
+/* connecting regular spine heads and stems */
+for i=0,47 { 
+   connect spinh[i](0), spins[i](1)
+   connect spina[i](0), spinh[i](1)
+}
+    /* connecting dendrites */
+connect dend0(0), soma[2](1)
+for i=0,1 {
+   connect dend1[i](0), dend0(1)
+}
+for i=0,3 { 
+    j=int(i/2+.001)
+    connect dend2[i](0), dend1[j](1) 
+}
+for i=0,7 { 
+    j=int(i/2+.001)
+    connect dend3[i](0), dend2[j](1) 
+}
+/* for i=0,15 { 
+    j=int(i/2+.001)
+    connect dend4[i](0), dend3[j](1) 
+} */ 
+ /* connecting regular spines at random */
+
+objectvar r[60]
+for i=0,47 {
+   m=int((int((i+0.0001)/5.0)+0.0001)*5.0)
+   r[i] = new Random()
+   r[i].uniform(30.0,40.0)
+   j=int((i+0.0001)/12+0.001)  //j=0..3, parent branch No for every 12 spines
+   x=(r.repick())/60.
+   connect spins[i](0), dend2[j](x)
+}
+   /* connecting splitted spines 
+at random ensuring each branch gets
+equal numbers of spines */
+
+for i=0,11 {
+   r[i+48] = new Random()
+   r[i+48].uniform(30.0,40.0)
+   m=int((int((i+0.0001)/5.0)+0.0001)*5.0)
+   j=int((i+0.0001)/3+0.001)  
+
+/* j=0..3, parent branch No for 
+every 3 spines */
+
+   x=(r.repick())/60.
+   connect splns1[i](0), dend2[j](x)
+}
+
+/* putting one AMPA + one NMDA synapse at 
+each spine AZ*/
+syncur=0.00025
+objectvar asyn[92]
+objectvar nsyn[92]
+for i=0,47 spina[i] {
+   asyn[i]=new AlphaSynapse(1)
+   asyn[i].tau=0.25
+   asyn[i].onset=15
+   asyn[i].gmax=syncur
+   asyn[i].e=0
+   nsyn[i]=new NMDAsyn(1)
+   nsyn[i].tau1=80
+   nsyn[i].tau2=0.67
+   nsyn[i].onset=15
+   nsyn[i].gmax=0.4*syncur
+   nsyn[i].e=0
+}
+/* for each splitted spine the 
+synapse current is twice lower */
+for j=0,23 splna[j] {
+   i=j+48
+   asyn[i]=new AlphaSynapse(1)
+   asyn[i].tau=0.25
+   asyn[i].onset=15
+   asyn[i].gmax=syncur/2
+   asyn[i].e=0
+   nsyn[i]=new NMDAsyn(1)
+   nsyn[i].tau1=80
+   nsyn[i].tau2=0.67
+   nsyn[i].onset=15
+   nsyn[i].gmax=0.4*syncur/2
+   nsyn[i].e=0
+}
+/* putting 20 AMPA+NMDA-type synapses 
+at the middle of 2nd somatic compartment 
+in order to achieve a continious 
+depolirisation level */
+access soma[1]
+for i=72,91 {
+   asyn[i]=new AlphaSynapse(0.5)
+   asyn[i].onset=2*(i-71)-1
+   asyn[i].tau=0.25
+   asyn[i].gmax=0.0004
+   asyn[i].e=0
+   nsyn[i]=new NMDAsyn(0.5)
+   nsyn[i].tau1=80
+   nsyn[i].tau2=0.67
+   nsyn[i].onset=2*(i-71)-1
+   nsyn[i].gmax=0.0004*0.4
+   nsyn[i].e=0
+}
+forall {Ra=100}
+forall {celcius=30}
+tstop=50
+
+//xopen("$(NEURONHOME)/lib/hoc/noload.hoc")
+//xopen("$(NEURONHOME)/examples/ltp.session")
+//load_template("Inserter")
+//load_template("PointProcessManager")
+//load_proc("nrnmainmenu")
+//nrnmainmenu()
+

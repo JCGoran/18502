@@ -1,0 +1,39 @@
+load_file("nrngui.hoc")
+
+strdef tstr
+
+xpanel("Figure 2 Rusakov et. al. 1997")
+xlabel("20 percent of spines split with:")
+xbutton("branch near shaft", "{print \"split near shaft\" restart(\"ltp_two\")}")
+xbutton("regular sized necks", "{print \"regular sized necks\" restart(\"ltp_spl\")}")
+xlabel("Control: With interval of constant soma injection and")
+xlabel("random topography of dendrite spines with NMDA currents proportional to:")
+xbutton("0.25 nS AMPA", "{print \"AMPA cur=0.25nS\" restart(\"ltp_ran\")}")
+xbutton("0.35 nS AMPA", "{print \"AMPA cur=0.35nS\" restart(\"ltp_ttt\")}")
+xpanel(456,462)
+
+pwmcnt = PWManager[0].count // the initial gui should not be dismissed
+
+proc restart() {local i
+//	objref graphItem, save_window_
+//	for i=0, n_graph_lists-1 {
+//		graphList[i].remove_all()
+//	}
+//	flush_list.remove_all()
+//	fast_flush_list.remove_all()
+//	doNotify()
+//	for (i= PWManager[0].count-1; i >= pwmcnt; i -= 1) {
+//		PWManager[0].close(i)
+//		doNotify()
+//	}
+	
+	stoprun = 0
+	dt = .025
+	steps_per_ms = 40
+	tstop = 50
+	sprint(tstr, "%s.hoc", $s1)
+	load_file(1, tstr)
+	load_file("shape_spine_V.ses")
+	init()
+	run()
+}

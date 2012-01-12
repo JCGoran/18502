@@ -1,0 +1,189 @@
+/* NEURON hoc program. Random 
+topography of spines. 
+Control situation. */
+
+load_file("nrngui.hoc")
+
+  /* creating soma */
+create soma[3]	
+access soma[0]
+  nseg=3
+  diam=12
+  L=3
+  insert hh
+access soma[1]
+  nseg=3
+  diam=15
+  L=9
+  insert hh
+access soma[2]
+  nseg=3
+  diam=12
+  L=3
+  insert hh
+for i=0,1 soma[i] {
+   connect soma[i+1](0), soma[i](1)
+}
+   /* creating dendrites */
+
+create dend0
+access dend0
+   nseg=10
+   diam=2
+   L=5
+   insert pas
+create dend1[2]
+for i=0,1 dend1[i] {
+   nseg=5
+   diam=1
+   L=40
+   insert pas
+}
+create dend2[4]
+for i=0,3 dend2[i] {
+   nseg=120
+   diam=0.85
+   L=60
+   insert pas
+}
+create dend3[8]
+for i=0,7 dend3[i] {
+   nseg=5
+   diam=0.8
+   L=40
+   insert pas
+}
+/* create dend4[16]
+for i=0,15 dend4[i] {
+   nseg=3
+   diam=0.65
+   L=20
+   insert pas 
+} */
+    /* creating spine stems */
+objectvar rr[60]  //  random stem diameters
+create spins[60]
+for i=0,59 spins[i] {
+   rr[i] = new Random()   
+   rr[i].normal(0.18,0.0121)
+   x=(rr.repick())
+   nseg=10
+//   diam=0.1
+   if (x<0.02) x=abs(x)+0.02
+   diam=x
+   L=1
+   insert pas
+ }
+  /* creating spine heads and AZ*/
+coord_cadifus()
+create spinh[60]
+create spina[60]
+for i=0, 59 spinh[i] {
+   nseg=2
+   diam=1
+   L=0.7
+/* regenerative Ca2+ mechanisms 
+are adjusted */
+   insert cachan
+   insert cagk
+   insert cadifpmp
+   pcabar_cachan=0.002
+   gkbar_cagk=0.1
+   ek=-95
+   taufactor_cachan=0.5
+   cai=1e-04
+   cao=1.
+   pump0_cadifpmp=1e-13 /* 3e-14 is 
+default */
+ }
+for i=0, 59 spina[i] {
+   nseg=1
+   diam=1
+   L=0.1  
+   insert pas
+}
+
+  /* connecting spine heads and stems */
+for i=0, 59 {
+   connect spinh[i](0), spins[i](1)
+   connect spina[i](0), spinh[i](1)
+}
+   /* connecting dendrites */
+connect dend0(0), soma[2](1)
+for i=0,1 {
+   connect dend1[i](0), dend0(1)
+}
+for i=0,3 {
+    j=int(i/2+.001)
+    connect dend2[i](0), dend1[j](1)
+}
+for i=0,7 {
+    j=int(i/2+.001)
+    connect dend3[i](0), dend2[j](1)
+}
+/* for i=0,15 {
+    j=int(i/2+.001)
+    connect dend4[i](0), dend3[j](1)
+} */
+      /* connecting spines */
+
+objectvar r[60]
+for i=0,59 spins[i] {
+   r[i] = new Random()
+   r[i].uniform(30,40)
+    j=int(i/15+0.001)  /* j=0..3, 
+parent branch No for each 15 spines */
+//k=int(i-((j+0.00001)*15)+0.001)  //k=0..14
+//l=int(k/3+0.001)  //l=0..4, No of spine clusters per branch
+     x=(r.repick())/60.
+     connect spins[i](0), dend2[j](x)
+}
+/*  putting one AMPA-type 
+    (alpha-function) 
+    and one NMDA-type synapse 
+    at each spine AZ */
+syncur=0.00025
+objectvar asyn[80]
+objectvar nsyn[80]
+for i=0,59 spina[i] {
+   asyn[i]=new AlphaSynapse(1)
+   asyn[i].tau=0.25
+   asyn[i].onset=15
+   asyn[i].gmax=syncur
+   asyn[i].e=0
+   nsyn[i]=new NMDAsyn(1)
+   nsyn[i].tau1=80
+   nsyn[i].tau2=0.67
+   nsyn[i].onset=15
+   nsyn[i].gmax=0.4*syncur
+   nsyn[i].e=0
+}
+/* putting 20 AMPA+NMDA-type 
+synapses in the middle of 2nd 
+somatic compartment in order 
+to achieve a continious 
+depolirisation level */
+access soma[1]
+for i=60,79 {
+   asyn[i]=new AlphaSynapse(0.5)
+   asyn[i].onset=2*(i-59)-1
+   asyn[i].tau=0.25
+   asyn[i].gmax=0.0004
+   asyn[i].e=0
+   nsyn[i]=new NMDAsyn(0.5)
+   nsyn[i].tau1=80
+   nsyn[i].tau2=0.67
+   nsyn[i].onset=2*(i-59)-1
+   nsyn[i].gmax=0.0004*0.4
+   nsyn[i].e=0
+}
+forall {Ra=100}
+forall {celcius=30}
+tstop=50
+
+// xopen("$(NEURONHOME)/lib/hoc/noload.hoc")
+// xopen("$(NEURONHOME)/examples/ne-11.session")
+// load_template("Inserter")
+// load_template("PointProcessManager")
+// load_proc("nrnmainmenu")
+// nrnmainmenu()
